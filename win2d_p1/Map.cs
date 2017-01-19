@@ -12,17 +12,26 @@ using Windows.UI;
 namespace win2d_p1 {
     class Map {
         public long DebugCreationTimeMilliseconds { get; set; }
+        private CanvasRenderTarget RenderTarget { get; set; }
 
-        private static int nNumberOfPasses = 1000;
-        private static int nBaseDropsPerPass = 70;
+        private static int nNumberOfPasses = 100;
+        private static int nBaseDropsPerPass = 30;
         private static int nDropsVariance = 50;
         private static int nBonusDropRate = 50;
-        private static int nBonusDrops = 200;
-        public static readonly int TileSize = 8;
+        private static int nBonusDrops = 100;
+        public static readonly int TileSizeInPixels = 32;
         public Tile[,] Tiles { get; set; }
 
-        public Map(int rows, int columns) {
+        private int _widthInTiles;
+        public int WidthInTiles { get { return _widthInTiles; } }
+        private int _heightInTiles;
+        public int HeightInTiles { get { return _heightInTiles; } }
+
+        public Map(CanvasDevice device, int rows, int columns) {
             Stopwatch s = Stopwatch.StartNew();
+
+            _widthInTiles = columns;
+            _heightInTiles = rows;
 
             List<TILE_TYPE> tileTypes = Enum.GetValues(typeof(TILE_TYPE)).OfType<TILE_TYPE>().ToList();
             int[,] elevationMap = new int[rows, columns];
@@ -41,7 +50,7 @@ namespace win2d_p1 {
             int nNumberOfBlurs = 3;
             for(int i = 0; i < nNumberOfBlurs; i++) {
                 elevationMap = Blur(elevationMap);
-            }            
+            }
 
             Tiles = new Tile[rows, columns];
             for(int column = 0; column < columns; column++) {
@@ -63,6 +72,7 @@ namespace win2d_p1 {
                 }
             }
 
+            SaveWorldImage(device);
             s.Stop();
             DebugCreationTimeMilliseconds = s.ElapsedMilliseconds;
         }
@@ -119,49 +129,45 @@ namespace win2d_p1 {
         }
 
         public void Draw(CanvasAnimatedDrawEventArgs args) {
-            Color currentTileColor;
-            for(int column = 0; column < Tiles.GetLength(1); column++) {
-                for(int row = 0; row < Tiles.GetLength(0); row++) {
-                    CanvasBitmap bitmap = Images.Grass;
-                    switch(Tiles[row, column].TileType) {
-                        case TILE_TYPE.GRASS:
-                            bitmap = Images.Grass;
-                            currentTileColor = Colors.Green;
-                            break;
-                        case TILE_TYPE.DIRT:
-                            bitmap = Images.Desert;
-                            currentTileColor = Colors.Brown;
-                            break;
-                        case TILE_TYPE.DESERT:
-                            currentTileColor = Colors.Yellow;
-                            break;
-                        case TILE_TYPE.OCEAN:
-                            bitmap = Images.Ocean;
-                            currentTileColor = Colors.Blue;
-                            break;
-                        case TILE_TYPE.RIVER:
-                            currentTileColor = Colors.CornflowerBlue;
-                            break;
-                        case TILE_TYPE.SWAMP:
-                            currentTileColor = Colors.Purple;
-                            break;
-                        case TILE_TYPE.FOREST:
-                            currentTileColor = Colors.Green;
-                            break;
-                        case TILE_TYPE.MOUNTAIN:
-                            bitmap = Images.Mountains;
-                            currentTileColor = Colors.Red;
-                            break;
-                        default:
-                            currentTileColor = Colors.White;
-                            break;
+            args.DrawingSession.DrawImage(RenderTarget);
+        }
+
+        private void SaveWorldImage(CanvasDevice device) {
+            RenderTarget = new CanvasRenderTarget(device, WidthInTiles * TileSizeInPixels, HeightInTiles * TileSizeInPixels, 96);
+            using(CanvasDrawingSession ds = RenderTarget.CreateDrawingSession()) {
+                for(int column = 0; column < Tiles.GetLength(1); column++) {
+                    for(int row = 0; row < Tiles.GetLength(0); row++) {
+                        CanvasBitmap bitmap = Images.Grass;
+                        switch(Tiles[row, column].TileType) {
+                            case TILE_TYPE.GRASS:
+                                bitmap = Images.Grass;
+                                break;
+                            case TILE_TYPE.DIRT:
+                                bitmap = Images.Desert;
+                                break;
+                            case TILE_TYPE.DESERT:
+                                break;
+                            case TILE_TYPE.OCEAN:
+                                bitmap = Images.Ocean;
+                                break;
+                            case TILE_TYPE.RIVER:
+                                break;
+                            case TILE_TYPE.SWAMP:
+                                break;
+                            case TILE_TYPE.FOREST:
+                                break;
+                            case TILE_TYPE.MOUNTAIN:
+                                bitmap = Images.Mountains;
+                                break;
+                            default:
+                                break;
+                        }
+
+                        double tilePositionX = column * TileSizeInPixels;
+                        double tilePositionY = row * TileSizeInPixels;
+
+                        ds.DrawImage(bitmap, new Rect(tilePositionX, tilePositionY, TileSizeInPixels, TileSizeInPixels));
                     }
-
-                    double tilePositionX = column * TileSize;
-                    double tilePositionY = row * TileSize;
-
-                    args.DrawingSession.DrawImage(bitmap, new Rect(tilePositionX, tilePositionY, TileSize, TileSize));
-                    //args.DrawingSession.FillRectangle(new Rect(tilePositionX, tilePositionY, TileSize, TileSize), currentTileColor);
                 }
             }
         }

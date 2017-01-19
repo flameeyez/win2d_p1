@@ -30,13 +30,15 @@ namespace win2d_p1 {
     /// </summary>
     public sealed partial class MainPage : Page {
         Map map;
-        int mapRows = 1 + 1080 / Map.TileSize;// 200;
-        int mapColumns = 1 + 1920 / Map.TileSize; //400;
+        int mapRows = 1 + 1080 / Map.TileSizeInPixels;
+        int mapColumns = 1 + 1920 / Map.TileSizeInPixels;
 
         long DebugDrawTimeMilliseconds;
 
         double mouseX;
         double mouseY;
+
+        bool bCreateNewMapOnNextUpdate = false;
 
         public MainPage() {
             this.InitializeComponent();
@@ -47,7 +49,10 @@ namespace win2d_p1 {
         private void CoreWindow_KeyDown(CoreWindow sender, KeyEventArgs args) {
             switch(args.VirtualKey) {
                 case Windows.System.VirtualKey.Space:
-                    map = new Map(rows: mapRows, columns: mapColumns);
+                    bCreateNewMapOnNextUpdate = true;
+                    break;
+                case Windows.System.VirtualKey.Escape:
+                    Application.Current.Exit();
                     break;
             }
         }
@@ -62,22 +67,37 @@ namespace win2d_p1 {
         }
 
         private void DrawDebug(CanvasAnimatedDrawEventArgs args) {
-            args.DrawingSession.DrawText("Mouse: " + ((int)mouseX).ToString() + ", " + ((int)mouseY).ToString(), new Vector2(1500, 10), Colors.White);
-            args.DrawingSession.DrawText("Creation time: " + map.DebugCreationTimeMilliseconds.ToString() + "ms", new Vector2(1500, 30), Colors.White);
-            args.DrawingSession.DrawText("Draw time: " + DebugDrawTimeMilliseconds.ToString() + "ms", new Vector2(1500, 50), Colors.White);
-            int mapTileX = (int)(mouseX / Map.TileSize);
-            int mapTileY = (int)(mouseY / Map.TileSize);
-            if(mapTileX > 0 && mapTileX < map.Tiles.GetLength(1) && mapTileY > 0 && mapTileY < map.Tiles.GetLength(0)) {
-                args.DrawingSession.DrawText("Elevation: " + map.Tiles[mapTileY, mapTileX].Elevation.ToString(), new System.Numerics.Vector2(1500, 70), Colors.White);
+            List<string> DebugStrings = new List<string>();
+
+            DebugStrings.Add("Mouse: " + ((int)mouseX).ToString() + ", " + ((int)mouseY).ToString());
+            DebugStrings.Add("Creation time: " + map.DebugCreationTimeMilliseconds.ToString() + "ms");
+            DebugStrings.Add("Draw time: " + DebugDrawTimeMilliseconds.ToString() + "ms");
+            DebugStrings.Add("Map dimensions: " + map.Tiles.GetLength(1) + ", " + map.Tiles.GetLength(0));
+
+            int mapTileX = (int)(mouseX / Map.TileSizeInPixels);
+            int mapTileY = (int)(mouseY / Map.TileSizeInPixels);
+            if(mapTileX >= 0 && mapTileX < map.Tiles.GetLength(1) && mapTileY >= 0 && mapTileY < map.Tiles.GetLength(0)) {
+                DebugStrings.Add("Map coordinates: " + mapTileX.ToString() + ", " + mapTileY.ToString());
+                DebugStrings.Add("Elevation: " + map.Tiles[mapTileY, mapTileX].Elevation.ToString());
+                args.DrawingSession.DrawRectangle(new Rect(mapTileX * Map.TileSizeInPixels, mapTileY * Map.TileSizeInPixels, Map.TileSizeInPixels, Map.TileSizeInPixels), Colors.Red);
             }
+
+            float y = 10.0f;
+            foreach(string str in DebugStrings) {
+                args.DrawingSession.DrawText(str, new Vector2(1500, y), Colors.White);
+                y += 20.0f;
+            }
+
         }
 
         private void canvasMain_Update(ICanvasAnimatedControl sender, CanvasAnimatedUpdateEventArgs args) {
-
+            if(bCreateNewMapOnNextUpdate) {
+                map = new Map(device: canvasMain.Device, rows: mapRows, columns: mapColumns);
+                bCreateNewMapOnNextUpdate = false;
+            }
         }
 
         private void canvasMain_CreateResources(CanvasAnimatedControl sender, CanvasCreateResourcesEventArgs args) {
-            map = new Map(rows: mapRows, columns: mapColumns);
             args.TrackAsyncAction(CreateResourcesAsync(sender).AsAsyncAction());
         }
 
@@ -86,6 +106,7 @@ namespace win2d_p1 {
             Images.Mountains = await CanvasBitmap.LoadAsync(sender, "images\\mountains.png");
             Images.Desert = await CanvasBitmap.LoadAsync(sender, "images\\desert.png");
             Images.Grass = await CanvasBitmap.LoadAsync(sender, "images\\grass.png");
+            map = new Map(device: sender.Device, rows: mapRows, columns: mapColumns);
         }
 
         private void canvasMain_PointerMoved(object sender, PointerRoutedEventArgs e) {
