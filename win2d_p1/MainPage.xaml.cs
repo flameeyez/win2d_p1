@@ -25,11 +25,19 @@ using Windows.UI.Xaml.Navigation;
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
 namespace win2d_p1 {
+    enum GAME_STATE {
+        GAME,
+        MENU
+    }
+
     /// <summary>
     /// An empty page that can be used on its own or navigated to within a Frame.
     /// </summary>
     public sealed partial class MainPage : Page {
+        GAME_STATE CurrentGameState = GAME_STATE.GAME;
+
         Map map;
+        Menu menu;
         int mapRows = 1 + 1080 / Map.TileSizeInPixels;
         int mapColumns = 1 + 1920 / Map.TileSizeInPixels;
 
@@ -47,12 +55,27 @@ namespace win2d_p1 {
         }
 
         private void CoreWindow_KeyDown(CoreWindow sender, KeyEventArgs args) {
-            switch(args.VirtualKey) {
-                case Windows.System.VirtualKey.Space:
-                    bCreateNewMapOnNextUpdate = true;
+            switch(CurrentGameState) {
+                case GAME_STATE.GAME:
+                    switch(args.VirtualKey) {
+                        case Windows.System.VirtualKey.Space:
+                            bCreateNewMapOnNextUpdate = true;
+                            break;
+                        case Windows.System.VirtualKey.Escape:
+                            Application.Current.Exit();
+                            break;
+                        case Windows.System.VirtualKey.M:
+                            CurrentGameState = GAME_STATE.MENU;
+                            break;
+                    }
                     break;
-                case Windows.System.VirtualKey.Escape:
-                    Application.Current.Exit();
+                case GAME_STATE.MENU:
+                    switch(args.VirtualKey) {
+                        case Windows.System.VirtualKey.M:
+                        case Windows.System.VirtualKey.Escape:
+                            CurrentGameState = GAME_STATE.GAME;
+                            break;
+                    }
                     break;
             }
         }
@@ -62,6 +85,12 @@ namespace win2d_p1 {
             map.Draw(args);
             s.Stop();
             DebugDrawTimeMilliseconds = s.ElapsedMilliseconds;
+
+            switch(CurrentGameState) {
+                case GAME_STATE.MENU:
+                    menu.Draw(args);
+                    break;
+            }
 
             DrawDebug(args);
         }
@@ -107,6 +136,7 @@ namespace win2d_p1 {
             Images.Desert = await CanvasBitmap.LoadAsync(sender, "images\\desert.png");
             Images.Grass = await CanvasBitmap.LoadAsync(sender, "images\\grass.png");
             map = new Map(device: sender.Device, rows: mapRows, columns: mapColumns);
+            menu = new Menu();
         }
 
         private void canvasMain_PointerMoved(object sender, PointerRoutedEventArgs e) {
