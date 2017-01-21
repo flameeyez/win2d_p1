@@ -75,6 +75,9 @@ namespace win2d_p1 {
                         case Windows.System.VirtualKey.Escape:
                             CurrentGameState = GAME_STATE.GAME;
                             break;
+                        default:
+                            menu.KeyDown(args.VirtualKey);
+                            break;
                     }
                     break;
             }
@@ -136,7 +139,21 @@ namespace win2d_p1 {
             Images.Desert = await CanvasBitmap.LoadAsync(sender, "images\\desert.png");
             Images.Grass = await CanvasBitmap.LoadAsync(sender, "images\\grass.png");
             map = new Map(device: sender.Device, rows: mapRows, columns: mapColumns);
-            menu = new Menu();
+
+            float fMenuWidth = 1200.0f;
+            float fMenuHeight = 800.0f;
+            Vector2 menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
+            menu = new Menu(menuPosition, fMenuWidth, fMenuHeight);
+            menu.Items.Add(new MenuItem("Test 1"));
+            menu.Items.Add(new MenuItem("Test 2"));
+
+            MenuItem m3 = new MenuItem("Test 3");
+            m3.Event += M3_Event;
+            menu.Items.Add(m3);
+        }
+
+        private void M3_Event() {
+            menu.Items.Add(new MenuItem("Event!"));
         }
 
         private void canvasMain_PointerMoved(object sender, PointerRoutedEventArgs e) {
