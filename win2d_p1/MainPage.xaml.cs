@@ -11,6 +11,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.System;
 using Windows.UI;
 using Windows.UI.Core;
 using Windows.UI.Input;
@@ -27,7 +28,9 @@ using Windows.UI.Xaml.Navigation;
 namespace win2d_p1 {
     enum GAME_STATE {
         GAME,
-        MENU
+        MENU_MAIN,
+        MENU_PARTY_INVENTORY,
+        MENU_APPLY_ITEM_TO_PARTY_MEMBER
     }
 
     /// <summary>
@@ -37,7 +40,20 @@ namespace win2d_p1 {
         GAME_STATE CurrentGameState = GAME_STATE.GAME;
 
         Map map;
-        Menu menu;
+
+        MenuMain menuMain;
+        MenuPartyInventory menuPartyInventory;
+        MenuApplyItemToPartyMember menuApplyItemToPartyMember;
+
+        List<IDrawableUpdatable> drawList = new List<IDrawableUpdatable>();
+        object drawListLock = new object();
+        Party party;
+        Character character1;
+        Character character2;
+        Character character3;
+        Character character4;
+        Character character5;
+
         int mapRows = 1 + 1080 / Map.TileSizeInPixels;
         int mapColumns = 1 + 1920 / Map.TileSizeInPixels;
 
@@ -55,45 +71,74 @@ namespace win2d_p1 {
         }
 
         private void CoreWindow_KeyDown(CoreWindow sender, KeyEventArgs args) {
+            args.Handled = true;
+            var virtualKey = args.VirtualKey;
+            var action = canvasMain.RunOnGameLoopThreadAsync(() => KeyDown_GameLoopThread(virtualKey));
+        }
+
+        private void KeyDown_GameLoopThread(VirtualKey virtualKey) {
             switch(CurrentGameState) {
                 case GAME_STATE.GAME:
-                    switch(args.VirtualKey) {
-                        case Windows.System.VirtualKey.Space:
+                    switch(virtualKey) {
+                        case VirtualKey.Space:
                             bCreateNewMapOnNextUpdate = true;
                             break;
-                        case Windows.System.VirtualKey.Escape:
+                        case VirtualKey.Escape:
                             Application.Current.Exit();
                             break;
-                        case Windows.System.VirtualKey.M:
-                            CurrentGameState = GAME_STATE.MENU;
+                        case VirtualKey.M:
+                            CurrentGameState = GAME_STATE.MENU_MAIN;
+                            drawList.Add(menuMain);
                             break;
                     }
                     break;
-                case GAME_STATE.MENU:
-                    switch(args.VirtualKey) {
-                        case Windows.System.VirtualKey.M:
-                        case Windows.System.VirtualKey.Escape:
+                case GAME_STATE.MENU_MAIN:
+                    switch(virtualKey) {
+                        case VirtualKey.M:
+                        case VirtualKey.Escape:
                             CurrentGameState = GAME_STATE.GAME;
+                            drawList.Remove(menuMain);
                             break;
                         default:
-                            menu.KeyDown(args.VirtualKey);
+                            menuMain.KeyDown(virtualKey);
                             break;
                     }
                     break;
+                case GAME_STATE.MENU_PARTY_INVENTORY:
+                    switch(virtualKey) {
+                        case VirtualKey.Escape:
+                            CurrentGameState = GAME_STATE.MENU_MAIN;
+                            drawList.Remove(menuPartyInventory);
+                            break;
+                        default:
+                            menuPartyInventory.KeyDown(virtualKey);
+                            break;
+                    }
+                    break;
+                case GAME_STATE.MENU_APPLY_ITEM_TO_PARTY_MEMBER:
+                    //switch(virtualKey) {
+                    //    case VirtualKey.Escape:
+                    //        CurrentGameState = GAME_STATE.MENU_ITEM;
+                    //        drawList.Remove(menuParty);
+                    //        break;
+                    //    default:
+                    //        menuParty.KeyDown(virtualKey);
+                    //        break;
+                    //}
+                    break;
+
             }
         }
 
         private void canvasMain_Draw(ICanvasAnimatedControl sender, CanvasAnimatedDrawEventArgs args) {
             Stopwatch s = Stopwatch.StartNew();
-            map.Draw(args);
+            lock(drawListLock) {
+                foreach(IDrawableUpdatable idu in drawList) {
+                    idu.Draw(args);
+                }
+            }
             s.Stop();
             DebugDrawTimeMilliseconds = s.ElapsedMilliseconds;
-
-            switch(CurrentGameState) {
-                case GAME_STATE.MENU:
-                    menu.Draw(args);
-                    break;
-            }
 
             DrawDebug(args);
         }
@@ -139,21 +184,70 @@ namespace win2d_p1 {
             Images.Desert = await CanvasBitmap.LoadAsync(sender, "images\\desert.png");
             Images.Grass = await CanvasBitmap.LoadAsync(sender, "images\\grass.png");
             map = new Map(device: sender.Device, rows: mapRows, columns: mapColumns);
+            drawList.Add(map);
 
             float fMenuWidth = 1200.0f;
             float fMenuHeight = 800.0f;
             Vector2 menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
-            menu = new Menu(menuPosition, fMenuWidth, fMenuHeight);
-            menu.Items.Add(new MenuItem("Test 1"));
-            menu.Items.Add(new MenuItem("Test 2"));
+            menuMain = new MenuMain(menuPosition, fMenuWidth, fMenuHeight);
+            menuMain.Items.Add(new MenuItem("Test 1"));
+            menuMain.Items.Add(new MenuItem("Test 2"));
 
-            MenuItem m3 = new MenuItem("Test 3");
+            MenuItem m3 = new MenuItem("Items");
             m3.Event += M3_Event;
-            menu.Items.Add(m3);
+            menuMain.Items.Add(m3);
+
+            // create mock party and inventory
+            party = new Party();
+            character1 = new Character("Jerb");
+            character2 = new Character("Cecilia");
+            character3 = new Character("Branzolo");
+            character4 = new Character("Joffin");
+            character5 = new Character("Segbag");
+
+            PartyInventory partyInventory = new PartyInventory();
+            // TODO: maintain master list of item references
+            // TODO: potions restore some amount of health
+            Item item1 = new Item();
+            item1.Name = "Potion";
+            partyInventory.Add(item1, 5);
+            partyInventory.Add(item1, 2);
+            Item item2 = new Item();
+            item2.Name = "Potion";
+            partyInventory.Add(item2, 3);
+            party.Inventory = partyInventory;
+
+            fMenuWidth = 1100.0f;
+            fMenuHeight = 700.0f;
+            menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
+            menuPartyInventory = new MenuPartyInventory(party.Inventory, menuPosition, fMenuWidth, fMenuHeight, Colors.Green);
+
+            //MenuItem m4 = new MenuItem("Potion");
+            //m4.Event += M4_Event;
+            //menuItem.Items.Add(m4);
+            //menuItem.Items.Add(new MenuItem("Test 5"));
+
+            //fMenuWidth = 1000.0f;
+            //fMenuHeight = 600.0f;
+            //menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
+            //menuParty = new Menu(menuPosition, fMenuWidth, fMenuHeight, Colors.Purple);
+            //menuParty.Items.Add(new MenuItem("Test 6"));
+            //menuParty.Items.Add(new MenuItem("Test 7"));
         }
 
+        //private void M4_Event() {
+        //    CurrentGameState = GAME_STATE.MENU_PARTY;
+        //    lock(drawListLock) {
+        //        drawList.Add(menuParty);
+        //    }
+        //}
+
         private void M3_Event() {
-            menu.Items.Add(new MenuItem("Event!"));
+            CurrentGameState = GAME_STATE.MENU_PARTY_INVENTORY;
+            lock(drawListLock) {
+                drawList.Add(menuPartyInventory);
+            }            
+            //menu.Items.Add(new MenuItem("Event!"));
         }
 
         private void canvasMain_PointerMoved(object sender, PointerRoutedEventArgs e) {

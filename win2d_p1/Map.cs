@@ -10,7 +10,7 @@ using Windows.Foundation;
 using Windows.UI;
 
 namespace win2d_p1 {
-    class Map {
+    class Map : IDrawableUpdatable {
         public long DebugCreationTimeMilliseconds { get; set; }
         private CanvasRenderTarget RenderTarget { get; set; }
 

@@ -95,13 +95,22 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Images.cs" />
+    <Compile Include="Item.cs" />
+    <Compile Include="menu\MenuApplyItemToPartyMember.cs" />
+    <Compile Include="menu\MenuMain.cs" />
+    <Compile Include="menu\MenuPartyInventory.cs" />
+    <Compile Include="PartyInventory.cs" />
+    <Compile Include="party\Attributes.cs" />
+    <Compile Include="party\Character.cs" />
+    <Compile Include="IDrawableUpdatable.cs" />
+    <Compile Include="images\Images.cs" />
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Map.cs" />
-    <Compile Include="Menu.cs" />
-    <Compile Include="MenuItem.cs" />
+    <Compile Include="menu\Menu.cs" />
+    <Compile Include="menu\MenuItem.cs" />
+    <Compile Include="party\Party.cs" />
     <Compile Include="pathfinding\BinaryHeap.cs" />
     <Compile Include="pathfinding\HeapNode.cs" />
     <Compile Include="pathfinding\Path.cs" />
