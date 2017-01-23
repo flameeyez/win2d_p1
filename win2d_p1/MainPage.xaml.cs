@@ -205,17 +205,14 @@ namespace win2d_p1 {
             character4 = new Character("Joffin");
             character5 = new Character("Segbag");
 
-            PartyInventory partyInventory = new PartyInventory();
+            party.Inventory = new PartyInventory();
             // TODO: maintain master list of item references
             // TODO: potions restore some amount of health
-            Item item1 = new Item();
-            item1.Name = "Potion";
-            partyInventory.Add(item1, 5);
-            partyInventory.Add(item1, 2);
-            Item item2 = new Item();
-            item2.Name = "Potion";
-            partyInventory.Add(item2, 3);
-            party.Inventory = partyInventory;
+            for(int i = 0; i < 100; i++) {
+                Item item = new Item();
+                item.Name = "Antidote";
+                party.Inventory.Add(new PartyInventorySlot(sender.Device, item, i + 1));
+            }
 
             fMenuWidth = 1100.0f;
             fMenuHeight = 700.0f;

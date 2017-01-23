@@ -95,11 +95,13 @@
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Font.cs" />
     <Compile Include="Item.cs" />
     <Compile Include="menu\MenuApplyItemToPartyMember.cs" />
     <Compile Include="menu\MenuMain.cs" />
     <Compile Include="menu\MenuPartyInventory.cs" />
     <Compile Include="PartyInventory.cs" />
+    <Compile Include="PartyInventorySlot.cs" />
     <Compile Include="party\Attributes.cs" />
     <Compile Include="party\Character.cs" />
     <Compile Include="IDrawableUpdatable.cs" />
