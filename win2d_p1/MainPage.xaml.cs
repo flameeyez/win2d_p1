@@ -208,7 +208,7 @@ namespace win2d_p1 {
             party.Inventory = new PartyInventory();
             // TODO: maintain master list of item references
             // TODO: potions restore some amount of health
-            for(int i = 0; i < 100; i++) {
+            for(int i = 0; i < 215; i++) {
                 Item item = new Item();
                 item.Name = "Antidote";
                 party.Inventory.Add(new PartyInventorySlot(sender.Device, item, i + 1));
