@@ -15,7 +15,7 @@ namespace win2d_p1 {
         private int nSelectedItem;
         private static int nItemsPerRow = 4;
         private Vector2 _stringsPosition;
-        public PartyInventory PartyInventory { get; set; }
+        public Inventory PartyInventory { get; set; }
 
         private int _itemOffset = 0;
         private int _maxOffset {
@@ -34,7 +34,7 @@ namespace win2d_p1 {
         private float _heightOfMenuItem { get { return 20.0f + _defaultPadding; } }
         private int nItemsOnLastRow { get { return PartyInventory.Slots.Count % nItemsPerRow; } }
 
-        public MenuPartyInventory(PartyInventory partyInventory, Vector2 position, double width, double height, Color? backgroundColor = default(Color?)) : base(position, width, height, backgroundColor) {
+        public MenuPartyInventory(Inventory partyInventory, Vector2 position, double width, double height, Color? backgroundColor = default(Color?)) : base(position, width, height, backgroundColor) {
             _stringsPosition = new Vector2(_position.X + _defaultPadding, _position.Y + _defaultPadding);
             PartyInventory = partyInventory;
         }

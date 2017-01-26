@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace win2d_p1 {
-    class PartyInventory {
-        public List<PartyInventorySlot> Slots = new List<PartyInventorySlot>();
+    class Inventory {
+        public List<InventorySlot> Slots = new List<InventorySlot>();
 
-        public void Add(PartyInventorySlot slotToAdd) {
-            foreach(PartyInventorySlot slot in Slots) {
+        public void Add(InventorySlot slotToAdd) {
+            foreach(InventorySlot slot in Slots) {
                 if(slot.Item == slotToAdd.Item) {
                     slot.Count += slotToAdd.Count;
                     return;

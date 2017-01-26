@@ -40,6 +40,7 @@ namespace win2d_p1 {
         GAME_STATE CurrentGameState = GAME_STATE.GAME;
 
         Map map;
+
         MenuMain menuMain;
         MenuPartyInventory menuPartyInventory;
         MenuApplyItemToPartyMember menuApplyItemToPartyMember;
@@ -205,13 +206,13 @@ namespace win2d_p1 {
             character4 = new Character("Joffin");
             character5 = new Character("Segbag");
 
-            party.Inventory = new PartyInventory();
+            party.Inventory = new Inventory();
             // TODO: maintain master list of item references
             // TODO: potions restore some amount of health
             for (int i = 0; i < 215; i++) {
                 Item item = new Item();
                 item.Name = "Antidote";
-                party.Inventory.Add(new PartyInventorySlot(device: device, item: item, count: i + 1));
+                party.Inventory.Add(new InventorySlot(device: device, item: item, count: i + 1));
             }
         }
         private void CreateMainMenu() {

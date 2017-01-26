@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using Windows.UI;
 
 namespace win2d_p1 {
-    class PartyInventorySlot {
+    class InventorySlot {
         private CanvasDevice _device;
 
         private Item _item;
@@ -28,7 +28,7 @@ namespace win2d_p1 {
         private CanvasTextLayout _text;
         public CanvasTextLayout Text { get { return _text; } }
 
-        public PartyInventorySlot(CanvasDevice device, Item item, int count = 1) {
+        public InventorySlot(CanvasDevice device, Item item, int count = 1) {
             _device = device;
             _item = item;
             _count = count;
