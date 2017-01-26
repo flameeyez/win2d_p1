@@ -40,22 +40,16 @@ namespace win2d_p1 {
         GAME_STATE CurrentGameState = GAME_STATE.GAME;
 
         Map map;
-
         MenuMain menuMain;
         MenuPartyInventory menuPartyInventory;
         MenuApplyItemToPartyMember menuApplyItemToPartyMember;
 
-        List<IDrawableUpdatable> drawList = new List<IDrawableUpdatable>();
-        object drawListLock = new object();
         Party party;
         Character character1;
         Character character2;
         Character character3;
         Character character4;
         Character character5;
-
-        int mapRows = 1 + 1080 / Map.TileSizeInPixels;
-        int mapColumns = 1 + 1920 / Map.TileSizeInPixels;
 
         long DebugDrawTimeMilliseconds;
 
@@ -64,12 +58,7 @@ namespace win2d_p1 {
 
         bool bCreateNewMapOnNextUpdate = false;
 
-        public MainPage() {
-            this.InitializeComponent();
-
-            Window.Current.CoreWindow.KeyDown += CoreWindow_KeyDown;
-        }
-
+        #region KeyDown
         private void CoreWindow_KeyDown(CoreWindow sender, KeyEventArgs args) {
             args.Handled = true;
             var virtualKey = args.VirtualKey;
@@ -88,7 +77,6 @@ namespace win2d_p1 {
                             break;
                         case VirtualKey.M:
                             CurrentGameState = GAME_STATE.MENU_MAIN;
-                            drawList.Add(menuMain);
                             break;
                     }
                     break;
@@ -97,7 +85,6 @@ namespace win2d_p1 {
                         case VirtualKey.M:
                         case VirtualKey.Escape:
                             CurrentGameState = GAME_STATE.GAME;
-                            drawList.Remove(menuMain);
                             break;
                         default:
                             menuMain.KeyDown(virtualKey);
@@ -108,7 +95,6 @@ namespace win2d_p1 {
                     switch(virtualKey) {
                         case VirtualKey.Escape:
                             CurrentGameState = GAME_STATE.MENU_MAIN;
-                            drawList.Remove(menuPartyInventory);
                             break;
                         default:
                             menuPartyInventory.KeyDown(virtualKey);
@@ -129,20 +115,34 @@ namespace win2d_p1 {
 
             }
         }
+        #endregion
 
+        #region Draw
         private void canvasMain_Draw(ICanvasAnimatedControl sender, CanvasAnimatedDrawEventArgs args) {
             Stopwatch s = Stopwatch.StartNew();
-            lock(drawListLock) {
-                foreach(IDrawableUpdatable idu in drawList) {
-                    idu.Draw(args);
-                }
+            switch(CurrentGameState) {
+                case GAME_STATE.GAME:
+                    map.Draw(args);
+                    break;
+                case GAME_STATE.MENU_MAIN:
+                    map.Draw(args);
+                    menuMain.Draw(args);
+                    break;
+                case GAME_STATE.MENU_PARTY_INVENTORY:
+                    map.Draw(args);
+                    menuMain.Draw(args);
+                    menuPartyInventory.Draw(args);
+                    break;
+                case GAME_STATE.MENU_APPLY_ITEM_TO_PARTY_MEMBER:
+                    map.Draw(args);
+                    break;
             }
+
             s.Stop();
             DebugDrawTimeMilliseconds = s.ElapsedMilliseconds;
 
             DrawDebug(args);
         }
-
         private void DrawDebug(CanvasAnimatedDrawEventArgs args) {
             List<string> DebugStrings = new List<string>();
 
@@ -164,39 +164,39 @@ namespace win2d_p1 {
                 args.DrawingSession.DrawText(str, new Vector2(1500, y), Colors.White);
                 y += 20.0f;
             }
-
         }
+        #endregion
 
+        #region Update
         private void canvasMain_Update(ICanvasAnimatedControl sender, CanvasAnimatedUpdateEventArgs args) {
             if(bCreateNewMapOnNextUpdate) {
-                map = new Map(device: canvasMain.Device, rows: mapRows, columns: mapColumns);
+                CreateMap(device: sender.Device);
                 bCreateNewMapOnNextUpdate = false;
             }
         }
+        #endregion
 
+        #region Initialization
+        public MainPage() {
+            this.InitializeComponent();
+            Window.Current.CoreWindow.KeyDown += CoreWindow_KeyDown;
+        }
         private void canvasMain_CreateResources(CanvasAnimatedControl sender, CanvasCreateResourcesEventArgs args) {
             args.TrackAsyncAction(CreateResourcesAsync(sender).AsAsyncAction());
         }
-
         private async Task CreateResourcesAsync(CanvasAnimatedControl sender) {
-            Images.Ocean = await CanvasBitmap.LoadAsync(sender, "images\\ocean.png");
-            Images.Mountains = await CanvasBitmap.LoadAsync(sender, "images\\mountains.png");
-            Images.Desert = await CanvasBitmap.LoadAsync(sender, "images\\desert.png");
-            Images.Grass = await CanvasBitmap.LoadAsync(sender, "images\\grass.png");
-            map = new Map(device: sender.Device, rows: mapRows, columns: mapColumns);
-            drawList.Add(map);
-
-            float fMenuWidth = 1200.0f;
-            float fMenuHeight = 800.0f;
-            Vector2 menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
-            menuMain = new MenuMain(menuPosition, fMenuWidth, fMenuHeight);
-            menuMain.Items.Add(new MenuItem("Test 1"));
-            menuMain.Items.Add(new MenuItem("Test 2"));
-
-            MenuItem m3 = new MenuItem("Items");
-            m3.Event += M3_Event;
-            menuMain.Items.Add(m3);
-
+            await Images.Load(sender.Device);
+            CreateMap(device: sender.Device);
+            CreateParty(device: sender.Device);
+            CreateMainMenu();
+            CreatePartyInventoryMenu();
+        }
+        private void CreateMap(CanvasDevice device) {
+            int mapRows = (int)(1 + canvasMain.Size.Height / Map.TileSizeInPixels);
+            int mapColumns = (int)(1 + canvasMain.Size.Width / Map.TileSizeInPixels);
+            map = new Map(device: device, rows: mapRows, columns: mapColumns);
+        }
+        private void CreateParty(CanvasDevice device) {
             // create mock party and inventory
             party = new Party();
             character1 = new Character("Jerb");
@@ -208,49 +208,47 @@ namespace win2d_p1 {
             party.Inventory = new PartyInventory();
             // TODO: maintain master list of item references
             // TODO: potions restore some amount of health
-            for(int i = 0; i < 215; i++) {
+            for (int i = 0; i < 215; i++) {
                 Item item = new Item();
                 item.Name = "Antidote";
-                party.Inventory.Add(new PartyInventorySlot(sender.Device, item, i + 1));
+                party.Inventory.Add(new PartyInventorySlot(device: device, item: item, count: i + 1));
             }
-
-            fMenuWidth = 1100.0f;
-            fMenuHeight = 700.0f;
-            menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
-            menuPartyInventory = new MenuPartyInventory(party.Inventory, menuPosition, fMenuWidth, fMenuHeight, Colors.Green);
-
-            //MenuItem m4 = new MenuItem("Potion");
-            //m4.Event += M4_Event;
-            //menuItem.Items.Add(m4);
-            //menuItem.Items.Add(new MenuItem("Test 5"));
-
-            //fMenuWidth = 1000.0f;
-            //fMenuHeight = 600.0f;
-            //menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
-            //menuParty = new Menu(menuPosition, fMenuWidth, fMenuHeight, Colors.Purple);
-            //menuParty.Items.Add(new MenuItem("Test 6"));
-            //menuParty.Items.Add(new MenuItem("Test 7"));
         }
+        private void CreateMainMenu() {
+            float fMenuWidth = 1200.0f;
+            float fMenuHeight = 800.0f;
+            Vector2 menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
+            menuMain = new MenuMain(menuPosition, fMenuWidth, fMenuHeight);
+            menuMain.Items.Add(new MenuItem("Test 1"));
+            menuMain.Items.Add(new MenuItem("Test 2"));
 
-        //private void M4_Event() {
-        //    CurrentGameState = GAME_STATE.MENU_PARTY;
-        //    lock(drawListLock) {
-        //        drawList.Add(menuParty);
-        //    }
-        //}
+            MenuItem m3 = new MenuItem("Items");
+            m3.Event += M3_Event;
+            menuMain.Items.Add(m3);
 
+            menuMain.Party = party;
+        }
+        private void CreatePartyInventoryMenu() {
+            float fMenuWidth = 1100.0f;
+            float fMenuHeight = 700.0f;
+            Vector2 menuPosition = new Vector2((1920 - fMenuWidth) * 0.5f, (1080 - fMenuHeight) * 0.5f);
+            menuPartyInventory = new MenuPartyInventory(party.Inventory, menuPosition, fMenuWidth, fMenuHeight, Colors.Green);
+        }
+        #endregion
+
+        #region Menu Event Handling
+        // menu item 3 event handler
         private void M3_Event() {
             CurrentGameState = GAME_STATE.MENU_PARTY_INVENTORY;
-            lock(drawListLock) {
-                drawList.Add(menuPartyInventory);
-            }            
-            //menu.Items.Add(new MenuItem("Event!"));
         }
+        #endregion
 
+        #region Mouse
         private void canvasMain_PointerMoved(object sender, PointerRoutedEventArgs e) {
             PointerPoint p = e.GetCurrentPoint(canvasMain);
             mouseX = p.Position.X;
             mouseY = p.Position.Y;
         }
+        #endregion
     }
 }
